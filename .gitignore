@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+Game
+DOOM
+Doom
+
+# Extra
+.DS_Store
