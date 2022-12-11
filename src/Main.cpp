@@ -1,8 +1,3 @@
-//------------------------------------------------------------------------------
-//--------------------------Code By: 3DSage-------------------------------------
-//----------------Video tutorial on YouTube-3DSage------------------------------
-//------------------------------------------------------------------------------
-
 #include <math.h>
 #include <stdio.h>
 // #include <GL/glut.h>
@@ -27,6 +22,19 @@ typedef struct
  int sl,sr;             //strafe left, right 
  int m;                 //move up, down, look up, down
 }keys; keys K;
+
+typedef struct //sin cos math
+{
+    float cos[360];
+    float sin[360];
+}math; math M;
+
+typedef struct //Player atttributes
+{
+    int x, y, z;
+    int a;
+    int l;
+}player; player P;
 //------------------------------------------------------------------------------
 
 void pixel(int x,int y, int c)                  //draw a pixel at x/y with rgb
@@ -49,18 +57,20 @@ void pixel(int x,int y, int c)                  //draw a pixel at x/y with rgb
 void movePlayer()
 {
  //move up, down, left, right
- if(K.a ==1 && K.m==0){ printf("left\n");}  
- if(K.d ==1 && K.m==0){ printf("right\n");}
- if(K.w ==1 && K.m==0){ printf("up\n");}
- if(K.s ==1 && K.m==0){ printf("down\n");}
+ if(K.a ==1 && K.m==0){ P.a -= 4; if (P.a < 0) {P.a += 360;}}  
+ if(K.d ==1 && K.m==0){ P.a += 4; if (P.a > 359) {P.a -= 360;}}
+ int dx = M.sin[P.a] * 10;
+ int dy = M.cos[P.a] * 10;
+ if(K.w ==1 && K.m==0){ P.x += dx; P.y -= dy;}
+ if(K.s ==1 && K.m==0){ P.x -= dx; P.y += dy;}
  //strafe left, right
- if(K.sr==1){ printf("strafe left\n");}
- if(K.sl==1){ printf("strafe right\n");}
+ if(K.sr==1){ P.x += dy; P.y -= dx;}
+ if(K.sl==1){ P.x -= dy; P.y += dx;}
  //move up, down, look up, look down
- if(K.a==1 && K.m==1){ printf("look up\n");}
- if(K.d==1 && K.m==1){ printf("look down\n");}
- if(K.w==1 && K.m==1){ printf("move up\n");}
- if(K.s==1 && K.m==1){ printf("move down\n");}
+ if(K.a==1 && K.m==1){ P.l -= 1;}
+ if(K.d==1 && K.m==1){ P.l += 1;}
+ if(K.w==1 && K.m==1){ P.z -= 4;}
+ if(K.s==1 && K.m==1){ P.z += 4;}
 }
 
 void clearBackground() 
@@ -71,19 +81,70 @@ void clearBackground()
  }	
 }
 
-int tick;
+void drawWall(int x1, int x2, int b1, int b2, int t1, int t2)
+{
+    int x, y;
+    //hold the difference in distance
+    int dyb = b2 - b1;                       //Y distance of bottom line
+    int dyt = t2 - t1;                       //Y Distance of top line
+    int dx = x2 - x1; if (dx == 0) {dx = 1;} //x distance 
+    int xs = x1;                             //hold the inital x1 starting position
+    //CLIP X
+    if (x1 < 1) {x1 = 1;} //Left
+    if (x2 < 1) {x2 = 1;} //left
+    if (x1 > SW - 1) {x1 = SW - 1;} //Right
+    if (x2 > SW - 1) {x2 = SW - 1;} //right
+    //draw x vertical lines
+    for (x = x1; x < x2; x++)
+    {
+        //The y start and end point
+        int y1 = dyb * (x - xs + 0.5) / dx + b1;
+        int y2 = dyt * (x - xs + 0.5) / dx + t1;
+
+        //CLIP Y
+        if (y1 < 1) {y1 = 1;} //y
+        if (y2 < 1) {y2 = 1;} //y
+        if (y1 > SH - 1) {y1 = SH - 1;} //y
+        if (y2 > SH - 1) {y2 = SH - 1;} //y
+
+        for (y = y1; y < y2; y++)
+        {
+            pixel(x, y, 0);
+        }
+    }
+}
+
 void draw3D()
-{int x,y,c=0;
- for(y=0;y<SH2;y++)
- {
-  for(x=0;x<SW2;x++)
-  {
-   pixel(x,y,c); 
-   c+=1; if(c>8){ c=0;}
-  }
- }
- //frame rate
- tick+=1; if(tick>20){ tick=0;} pixel(SW2,SH2+tick,0); 
+{
+    int wx[4], wy[4], wz[4];
+    float CS = M.cos[P.a], SN = M.sin[P.a];
+    //offset bottom 2 points by player
+    int x1 = 40 - P.x, y1 = 10 - P.y;
+    int x2 = 40 - P.x, y2 = 290 - P.y;
+    //world X postition
+    wx[0] = x1 * CS - y1 * SN;
+    wx[1] = x2 * CS - y2 * SN;
+    wx[2] = wx[0];
+    wx[3] = wx[1];
+    //world Y postition
+    wy[0] = y1 * CS + x1 * SN;
+    wy[1] = y2 * CS + x2 * SN;
+    wy[2] = wy[0];
+    wy[3] = wy[1];
+    //world Z height
+    wz[0] = 0 - P.z + ((P.l *wy[0]) / 32);
+    wz[1] = 0 - P.z + ((P.l *wy[1]) / 32);
+    wz[2] = wz[0] + 40;
+    wz[3] = wz[1] + 40;
+    //Screen x, screen y position
+    wx[0] = wx[0] * 200 / wy[0] + SW2; wy[0] = wz[0] * 200 / wy[0] + SH2;
+    wx[1] = wx[1] * 200 / wy[1] + SW2; wy[1] = wz[1] * 200 / wy[1] + SH2;
+    wx[2] = wx[2] * 200 / wy[2] + SW2; wy[2] = wz[2] * 200 / wy[2] + SH2;
+    wx[3] = wx[3] * 200 / wy[3] + SW2; wy[3] = wz[3] * 200 / wy[3] + SH2;
+    //Draw points
+    //if (wx[0] > 0 && wx[0] < SW && wy[0] > 0 && wy[0] < SH) {pixel(wx[0], wy[0], 0);}
+    //if (wx[1] > 0 && wx[1] < SW && wy[1] > 0 && wy[1] < SH) {pixel(wx[1], wy[1], 0);}
+    drawWall(wx[0], wx[1], wy[0], wy[1], wy[2], wy[3]);
 }
 
 void display() 
@@ -125,7 +186,21 @@ void KeysUp(unsigned char key,int x,int y)
 }
 
 void init()
-{       
+{
+    int x;
+    //store sin/cos in degrees
+    for (x = 0; x < 360; x++)
+    {
+        M.cos[x] = cos(x / 180.0 * M_PI);
+        M.sin[x] = sin(x / 180.0 * M_PI);
+    }  
+
+    //init player
+    P.x = 70;
+    P.y = -110;
+    P.z = 20;
+    P.a = 0;
+    P.l = 0;  
 }
 
 int main(int argc, char* argv[])
